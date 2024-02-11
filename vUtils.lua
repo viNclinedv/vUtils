@@ -1,7 +1,10 @@
---[[vUtils]]--
---[[by -v]]--
---[[Discord @viNclinedv]]--
+--[[
 
+    [vUtils]
+    by -v
+    Discord @viNclinedv
+    
+]]--
 
 local vUtils_VERSION = "1.0"
 local vUtils_LUA_NAME = "vUtils.lua"
@@ -20,23 +23,23 @@ local function fetch_url(url)
 end
 local function replace_current_file_with_latest_version(latest_version_script)
     local resources_path = cheat:get_resource_path()
-    local current_file_path = resources_path:gsub("resources$", "lua/lib/" .. vUtils_LUA_NAME)
+    local current_file_path = resources_path:gsub("resources$", "lua\\lib\\" .. vUtils_LUA_NAME)
     local file, errorMessage = io.open(current_file_path, "w")
     if not file then
-      print("Failed to open the current file for writing. Error: ", errorMessage)
-      return false
+        print("Failed to open the current file for writing. Error: ", errorMessage)
+        return false
     end
     file:write(latest_version_script)
     file:close()
     return true
-  end
+end
 local function check_for_update()
     local latest_script_content = fetch_url(vUtils_REPO_SCRIPT_PATH)
     if not latest_script_content then
         print("Failed to fetch [vUtils] for update check.")
         return
     end
-    local remote_version = latest_script_content:match("local vUtils_VERSION = \"(%d+%.%d+)\"")
+    local remote_version = latest_script_content:match('local vUtils_VERSION = "(%d+%.%d+)"')
     if not remote_version then
         print("Failed to extract version from the latest [vUtils] content.")
         return
@@ -55,34 +58,13 @@ local function check_for_update()
 end
 check_for_update()
 
-
 local vUtils = {
     Combo_key = 1,
     Clear_key = 3,
     Harass_key = 4,
-    Flee_key = 5,
+    Flee_key = 5
 }
 
-
-
-function vUtils.vec3:subtract(vec)
-    return vec3:new(self.x - vec.x, self.y - vec.y, self.z - vec.z)
-end
-
-function vUtils.vec3:add(vec)
-    return vec3:new(self.x + vec.x, self.y + vec.y, self.z + vec.z)
-end
-
-function vUtils.vec3:multiply(number)
-    return vec3:new(self.x * number, self.y * number, self.z * number)
-end
-
-function vUtils.vec3:rotate(point, angle)
-    angle = angle * (math.pi/180)
-    local rotatedX = math.cos(angle) * (point.x - self.x) - math.sin(angle) * (point.z - self.z) + self.x
-    local rotatedZ = math.sin(angle) * (point.x - self.x) + math.cos(angle) * (point.z - self.z) + self.z
-    return vec3:new(rotatedX, point.y ,rotatedZ)
-end
 
 function vUtils.createEnemiesList()
     return features.entity_list:get_enemies()
@@ -104,16 +86,16 @@ function vUtils.getDistance(from, to)
     return from:dist_to(to)
 end
 
-
-
-
-
-
-function vUtils.refreshSpells(spells)
+function vUtils.refreshSpells(
+    spells)
     for spellKey, spellData in pairs(spells) do
-        local spellSlot = g_local:get_spell_book():get_spell_slot(spellData.spellSlot)
-        spells[spellKey].Level = spellSlot.level
-        spells[spellKey].spell = spellSlot
+        if type(spellData) == "table" and spellData.spellSlot then
+            local spellSlot = g_local:get_spell_book():get_spell_slot(spellData.spellSlot)
+            if spellSlot then
+                spells[spellKey].Level = spellSlot.level
+                spells[spellKey].spell = spellSlot
+            end
+        end
     end
 end
 
@@ -122,7 +104,21 @@ function vUtils.isSpellReady(spells, spellKey)
 end
 
 function vUtils.haveEnoughMana(spells, spellKey)
-    return g_local.mana >= spells[spellKey].manaCost[spells[spellKey].Level]
+    local spell = spells[spellKey]
+    local manaCost = spell.manaCost
+
+    if type(manaCost) == "table" then
+        local level = spell.Level or spell.spell.level
+        manaCost = manaCost[level]
+    end
+    if type(manaCost) == "function" then
+        manaCost = manaCost()
+    end
+    if type(manaCost) == "number" then
+        return g_local.mana >= manaCost
+    else
+        return false
+    end
 end
 
 function vUtils.canCast(spells, spellKey)
@@ -140,16 +136,25 @@ end
 
 function vUtils.predPosition(spells, spellKey, target)
     local spell = spells[spellKey]
-    return features.prediction:predict(target.index, spell.Range, spell.Speed, spell.Width, spell.CastTime, g_local.position)
+    return features.prediction:predict(
+        target.index,
+        spell.Range,
+        spell.Speed,
+        spell.Width,
+        spell.CastTime,
+        g_local.position
+    )
 end
-
 
 -- # Enemies Around Target
 function vUtils.NumEnemiesInRangeTarget(range)
     local target = features.target_selector:get_default_target()
     local numAround = 0
-    for _,entity in pairs(features.entity_list:get_enemies()) do
-        if  entity ~= nil and not entity:is_invisible() and entity:is_alive() and entity.position:dist_to(target.position) <= range  then
+    for _, entity in pairs(features.entity_list:get_enemies()) do
+        if
+            entity ~= nil and not entity:is_invisible() and entity:is_alive() and
+                entity.position:dist_to(target.position) <= range
+         then
             numAround = numAround + 1
         end
     end
@@ -159,11 +164,12 @@ end
 -- # Enemies Near Given Position
 function vUtils.enemiesNearPosition(range, position)
     local numAround = 0
-    for _,entity in pairs(features.entity_list:get_enemies()) do
-       if  entity ~= nil and entity.position:dist_to(position) <= range then
-          numAround = numAround + 1
-       end
+    for _, entity in pairs(features.entity_list:get_enemies()) do
+        if entity ~= nil and entity.position:dist_to(position) <= range then
+            numAround = numAround + 1
+        end
     end
     return numAround
- end
+end
 
+return vUtils
