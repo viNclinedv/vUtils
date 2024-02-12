@@ -6,7 +6,7 @@
     
 ]]--
 
-local vUtils_VERSION = "1.0"
+local vUtils_VERSION = "1.1"
 local vUtils_LUA_NAME = "vUtils.lua"
 local vUtils_REPO_BASE_URL = "https://raw.githubusercontent.com/viNclinedv/vUtils/main/"
 local vUtils_REPO_SCRIPT_PATH = vUtils_REPO_BASE_URL .. vUtils_LUA_NAME
@@ -44,7 +44,7 @@ local function check_for_update()
         print("Failed to extract version from the latest [vUtils] content.")
         return
     end
-    print("Local version: " .. vUtils_VERSION .. ", Remote version: " .. remote_version)
+    print("Local [vUtils] version: " .. vUtils_VERSION .. ", Remote [vUtils] version: " .. remote_version)
     if remote_version and remote_version > vUtils_VERSION then
         print("Updating from version " .. vUtils_VERSION .. " to " .. remote_version)
         if replace_current_file_with_latest_version(latest_script_content) then
@@ -69,6 +69,18 @@ local vUtils = {
 --Control Print Statements
 function vUtils.Prints(str)
     if vUtils.debug == 1 then print(str) end
+end
+
+--RGB ColorShift for renders
+function vUtils.updateRGBColor()
+    local time = g_time
+    local frequency = 1.2
+
+    local r = math.sin(frequency * time + 0) * 127 + 128
+    local g = math.sin(frequency * time + 2 * math.pi / 3) * 127 + 128
+    local b = math.sin(frequency * time + 4 * math.pi / 3) * 127 + 128
+
+    return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = 255}
 end
 
 function vUtils.createEnemiesList()
