@@ -62,9 +62,14 @@ local vUtils = {
     Combo_key = 1,
     Clear_key = 3,
     Harass_key = 4,
-    Flee_key = 5
+    Flee_key = 5,
+    debug = nil,
 }
 
+--Control Print Statements
+function vUtils.Prints(str)
+    if vUtils.debug == 1 then print(str) end
+end
 
 function vUtils.createEnemiesList()
     return features.entity_list:get_enemies()
