@@ -6,7 +6,7 @@
     
 ]]--
 
-local vUtils_VERSION = "1.1"
+local vUtils_VERSION = "1.2"
 local vUtils_LUA_NAME = "vUtils.lua"
 local vUtils_REPO_BASE_URL = "https://raw.githubusercontent.com/viNclinedv/vUtils/main/"
 local vUtils_REPO_SCRIPT_PATH = vUtils_REPO_BASE_URL .. vUtils_LUA_NAME
@@ -178,6 +178,17 @@ function vUtils.NumEnemiesInRangeTarget(range)
     return numAround
 end
 
+-- # Enemies In Range
+function vUtils.NumEnemiesInRange(range)
+    local numAround = 0
+    for _,entity in pairs(features.entity_list:get_enemies()) do
+        if  entity ~= nil and not entity:is_invisible() and entity:is_alive() and entity.position:dist_to(g_local.position) <= range  then
+            numAround = numAround + 1
+        end
+    end
+    return numAround
+end
+
 -- # Enemies Near Given Position
 function vUtils.enemiesNearPosition(range, position)
     local numAround = 0
@@ -188,5 +199,71 @@ function vUtils.enemiesNearPosition(range, position)
     end
     return numAround
 end
+
+-- # Allies Around Local   
+function vUtils.NumAlliesInRange(range)
+    local numAround = 0
+    for _, ally in pairs(features.entity_list:get_allies()) do
+        if ally ~= nil and ally:is_alive() and ally.position:dist_to(g_local.position) <= range then
+            numAround = numAround + 1
+        end
+    end
+    return numAround
+end
+
+
+function vUtils.Vec3_Rotate(center, point, angle)
+    angle = angle * (math.pi/180)
+    local rotatedX = math.cos(angle) * (point.x - center.x) - math.sin(angle) * (point.z - center.z) + center.x
+    local rotatedZ = math.sin(angle) * (point.x - center.x) + math.cos(angle) * (point.z - center.z) + center.z
+    return vec3:new(rotatedX, point.y ,rotatedZ)
+end
+
+function vUtils.Rectangle_Polygon(start_pos, target_pos, width, range)
+    local pol = {}  
+    local temp = vUtils.Vec3_Extend(start_pos,target_pos, width/2)
+    pol[1] = vUtils.Vec3_Rotate(start_pos,temp,90)
+    pol[2] = vUtils.Vec3_Rotate(start_pos,temp,-90)
+    temp = vUtils.Vec3_Extend(target_pos,start_pos, range)
+    local temp2 = vUtils.Vec3_Extend(temp,target_pos, width/2)
+    pol[3] = vUtils.Vec3_Rotate(temp,temp2,90)
+    pol[4] = vUtils.Vec3_Rotate(temp,temp2,-90)
+    return pol
+end
+
+function vUtils.Vec3_Extend(a,b, dist) 
+    local distance = a:dist_to(b) 
+    local offset = dist / distance 
+    local dir = vec3:new((a.x - b.x), b.y, (a.z - b.z)) 
+    local newPos = vec3:new((a.x + dir.x*offset), b.y, (a.z + dir.z*offset)) 
+    return newPos end
+
+function vUtils.isInsidePolygon(point, polygon)
+    local oddNodes = false
+    local j = #polygon
+    for i = 1, j do
+        if (polygon[i].z < point.z and polygon[j].z >= point.z or polygon[j].z < point.z and polygon[i].z >= point.z) then
+            if (polygon[i].x + ( point.z - polygon[i].z ) / (polygon[j].z - polygon[i].z) * (polygon[j].x - polygon[i].x) < point.x) then
+                oddNodes = not oddNodes;
+            end
+        end
+        j = i;
+    end
+    return oddNodes
+end
+
+function vUtils.getEnimiesHitBy(poly)
+    local n = 0
+    for _,entity in pairs(features.entity_list:get_enemies()) do
+        if entity ~= nil and not entity:is_invisible() and entity:is_alive() then
+            local inside = vUtils.isInsidePolygon(entity.position, poly)
+            if inside then
+                n = n + 1
+            end
+        end
+    end
+    return n
+end
+
 
 return vUtils
