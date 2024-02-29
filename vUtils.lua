@@ -89,14 +89,14 @@ function vUtils.menu()
     
 
     local color_select = draw_sect:select("ColorShift Selection", color_config, {
-        "Rainbow", --index 0
-        "Flame",--index 1
-        "Ocean",--index 2
-        "Nature",--index 3
+        "Rainbow",
+        "Flame",
+        "Ocean",
+        "Nature",
       })
 
       function vUtils.updateCurrentColor()
-        local colorIndex = color_config:get_int() -- Assuming get_int() fetches the current selection index
+        local colorIndex = color_config:get_int()
         if colorIndex == 0 then
             vUtils.currentColor = vUtils.RainbowColor()
         elseif colorIndex == 1 then
@@ -106,14 +106,10 @@ function vUtils.menu()
         elseif colorIndex == 3 then
             vUtils.currentColor = vUtils.NatureColor()
         else
-            -- Default case, could log an error or set a default color
             vUtils.currentColor = {r = 255, g = 255, b = 255, a = 255} -- Setting to white as a default
         end
     end
-
-    -- It's important to initially update the color to reflect the default or initial selection
     vUtils.updateCurrentColor()
-
 end
 
 
