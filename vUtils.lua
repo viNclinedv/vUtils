@@ -6,7 +6,7 @@
     
 ]]--
 
-local vUtils_VERSION = "1.4"
+local vUtils_VERSION = "1.5"
 local vUtils_LUA_NAME = "vUtils.lua"
 local vUtils_REPO_BASE_URL = "https://raw.githubusercontent.com/viNclinedv/vUtils/main/"
 local vUtils_REPO_SCRIPT_PATH = vUtils_REPO_BASE_URL .. vUtils_LUA_NAME
@@ -84,29 +84,57 @@ function vUtils.menu()
     local test_navigation = menu.get_main_window():push_navigation(Script_name, 100000)
     local my_nav = menu.get_main_window():find_navigation(Script_name)
 
-    local draw_sect = my_nav:add_section("ColorShift Selection")
-    local color_config = g_config:add_int(0, "ColorShift Selection")
-    
+    local colorShift_sect = my_nav:add_section("ColorShift Selection")
+    local colorShift_config = g_config:add_int(0, "ColorShift Selection")
+    local colorShiftCustom_config = g_config:add_bool(false, "Use Custom ColorShift?")
+    local colorShiftCustom1_config = g_config:add_int(0, "Custom Color 1")
+    local colorShiftCustom2_config = g_config:add_int(0, "Custom Color 2")
+    local colorShiftCustom3_config = g_config:add_int(0, "Custom Color 3")
+    local colorShiftCustom4_config = g_config:add_int(0, "Custom Color 4")
 
-    local color_select = draw_sect:select("ColorShift Selection", color_config, {
+    local colorShift_select = colorShift_sect:select("ColorShift Selection", colorShift_config, {
         "Rainbow",
         "Flame",
         "Ocean",
         "Nature",
       })
 
+    local colorShiftCustom1 = colorShift_sect:slider_int("Color 1", colorShiftCustom1_config, 0, 16777215, 1) 
+    local colorShiftCustom2 = colorShift_sect:slider_int("Color 2", colorShiftCustom2_config, 0, 16777215, 1)
+    local colorShiftCustom3 = colorShift_sect:slider_int("Color 3", colorShiftCustom3_config, 0, 16777215, 1)
+    local colorShiftCustom4 = colorShift_sect:slider_int("Color 4", colorShiftCustom4_config, 0, 16777215, 1)
+
       function vUtils.updateCurrentColor()
-        local colorIndex = color_config:get_int()
-        if colorIndex == 0 then
-            vUtils.currentColor = vUtils.RainbowColor()
-        elseif colorIndex == 1 then
-            vUtils.currentColor = vUtils.FlameColor()
-        elseif colorIndex == 2 then
-            vUtils.currentColor = vUtils.OceanColor()
-        elseif colorIndex == 3 then
-            vUtils.currentColor = vUtils.NatureColor()
-        else
-            vUtils.currentColor = {r = 255, g = 255, b = 255, a = 255} -- Setting to white as a default
+        if colorShiftCustom_config:get_bool() == false then
+            local colorIndex = colorShift_config:get_int()
+            if colorIndex == 0 then
+                vUtils.currentColor = vUtils.RainbowColor()
+            elseif colorIndex == 1 then
+                vUtils.currentColor = vUtils.FlameColor()
+            elseif colorIndex == 2 then
+                vUtils.currentColor = vUtils.OceanColor()
+            elseif colorIndex == 3 then
+                vUtils.currentColor = vUtils.NatureColor()
+            else
+                vUtils.currentColor = {r = 255, g = 255, b = 255, a = 255} -- Setting to white as a default
+            end
+        end
+        if colorShiftCustom_config:get_bool() == true then
+            local customColors = {
+                colorShiftCustom1_config:get_int(),
+                colorShiftCustom2_config:get_int(),
+                colorShiftCustom3_config:get_int(),
+                colorShiftCustom4_config:get_int()
+            }
+    
+            vUtils.currentCustomColorIndex = (vUtils.currentCustomColorIndex or 0) + 1
+            if vUtils.currentCustomColorIndex > #customColors then
+                vUtils.currentCustomColorIndex = 1
+            end
+    
+            local currentColorValue = customColors[vUtils.currentCustomColorIndex]
+            local r, g, b = vUtils.intToRgb(currentColorValue)
+            vUtils.currentColor = {r = r, g = g, b = b, a = 255}
         end
     end
     vUtils.updateCurrentColor()
@@ -122,10 +150,20 @@ function vUtils.Prints(str)
     if vUtils.debug == 1 then print(str) end
 end
 
+--ColorShift Functions
+
+function vUtils.rgbToInt(r, g, b)
+    return r * 256^2 + g * 256 + b
+end
+function vUtils.intToRgb(value)
+    local r = math.floor(value / (256^2))
+    local g = math.floor((value / 256) % 256)
+    local b = value % 256
+    return r, g, b
+end
 
 
 
---RGB ColorShift
 function vUtils.RainbowColor()
     local time = g_time
     local frequency = 1.2
@@ -203,9 +241,8 @@ function vUtils.NatureColor()
     local frequency = 1.0
     
     local colors = {
-        {255, 192, 203, 255}, -- Pink
         {124, 252, 0, 255}, -- Lime Green
-        {17, 112, 20, 255}, --Light Emerald
+        {170, 252, 0, 255}, -- Bright Green
         {255, 255, 0, 255}, -- Yellow
         {255, 160, 122, 255}, -- Light Salmon
     }
@@ -222,6 +259,143 @@ function vUtils.NatureColor()
     local a = colors[colorIndex][4] * (1 - blendFactor) + colors[nextColorIndex][4] * blendFactor
     
     return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = math.floor(a)}
+end
+
+--Render Functions with Glow (vec3's)
+function vUtils.circle_3d(position, radius, flags, thickness, glow)
+
+    g_render:circle_3d(
+        position, 
+        color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, vUtils.currentColor.a), 
+        radius, 
+        flags, 
+        99999999999, 
+        thickness)
+
+    if glow then 
+        local startAlpha = 9
+        local startThickness = 6
+        local maxThickness = 19
+        local minAlpha = 0
+        local totalLayers = 7
+
+        local alphaDecrement = (startAlpha - minAlpha) / totalLayers
+        local thicknessIncrement = (maxThickness - startThickness) / totalLayers
+
+        for i = 1, totalLayers do
+            local alpha = math.max(startAlpha - (alphaDecrement * i), minAlpha)
+            local thickness = math.min(startThickness + (thicknessIncrement * i), maxThickness)
+
+            g_render:circle_3d(
+                position, 
+                color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, alpha), 
+                radius, 
+                flags, 
+                99999999999, 
+                thickness)
+        end
+    end
+
+end
+function vUtils.line_3d(startPos, endPos, thickness, glow)
+
+    g_render:line_3d(
+    startPos,
+    endPos,
+    color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, vUtils.currentColor.a), 
+    thickness)
+
+    if glow then 
+        local startAlpha = 9
+        local startThickness = 6
+        local maxThickness = 19
+        local minAlpha = 0
+        local totalLayers = 7
+
+        local alphaDecrement = (startAlpha - minAlpha) / totalLayers
+        local thicknessIncrement = (maxThickness - startThickness) / totalLayers
+
+        for i = 1, totalLayers do
+            local alpha = math.max(startAlpha - (alphaDecrement * i), minAlpha)
+            local thickness = math.min(startThickness + (thicknessIncrement * i), maxThickness)
+
+            g_render:line_3d(
+                startPos,
+                endPos,
+                color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, alpha), 
+                thickness)
+        end
+    end
+
+end
+
+--Render Functions with Glow (vec2's)
+function vUtils.text(posX, posY, text, font, size, glow)
+
+    g_render:text(
+        vec2:new(posX, posY), 
+        color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, vUtils.currentColor.a), 
+        text, 
+        font, 
+        size)
+
+    if glow then 
+        local startAlpha = 9
+        local startSize = size
+        local maxSize = size * 1.13
+        local minAlpha = 0
+        local totalLayers = 7
+
+        local offsetX = -1 -- Adjust this value as needed.
+        local offsetY = .5 -- Adjust this value as needed.
+
+        local alphaDecrement = (startAlpha - minAlpha) / totalLayers
+        local sizeIncrement = (maxSize - startSize) / totalLayers
+
+        for i = 1, totalLayers do
+            local alpha = math.max(startAlpha - (alphaDecrement * i), minAlpha)
+            local size = math.min(startSize + (sizeIncrement * i), maxSize)
+
+            g_render:text(
+            vec2:new(posX + (offsetX * i), posY + (offsetY * i)), 
+            color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, alpha), 
+            text, 
+            font, 
+            size)
+        end
+    end
+
+end
+function vUtils.line(startPosX, startPosY, endPosX, endPosY, thickness, glow)
+
+    g_render:line(
+        vec2:new(startPosX, startPosY),
+        vec2:new(endPosX, endPosY),
+        color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, vUtils.currentColor.a), 
+        thickness)
+
+    if glow then 
+        local startAlpha = 9
+        local startThickness = 6
+        local maxThickness = 19
+        local minAlpha = 0
+        local totalLayers = 7
+
+        local alphaDecrement = (startAlpha - minAlpha) / totalLayers
+        local thicknessIncrement = (maxThickness - startThickness) / totalLayers
+
+        for i = 1, totalLayers do
+            local alpha = math.max(startAlpha - (alphaDecrement * i), minAlpha)
+            local thickness = math.min(startThickness + (thicknessIncrement * i), maxThickness)
+
+            g_render:line(
+                vec2:new(startPosX, startPosY),
+                vec2:new(endPosX, endPosY),
+                color:new(vUtils.currentColor.r, vUtils.currentColor.g, vUtils.currentColor.b, alpha), 
+                thickness)
+        end
+    end
+
 end
 
 
