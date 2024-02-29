@@ -6,57 +6,68 @@
     
 ]]--
 
-local vUtils_VERSION = "1.2"
+local vUtils_VERSION = "1.3"
 local vUtils_LUA_NAME = "vUtils.lua"
 local vUtils_REPO_BASE_URL = "https://raw.githubusercontent.com/viNclinedv/vUtils/main/"
 local vUtils_REPO_SCRIPT_PATH = vUtils_REPO_BASE_URL .. vUtils_LUA_NAME
+local skipUpdate = false
 
 local function fetch_url(url)
-    local handle = io.popen("curl -s -H 'Cache-Control: no-cache' " .. url)
-    if not handle then
-        print("Failed to fetch URL: " .. url)
-        return nil
-    end
-    local content = handle:read("*a")
-    handle:close()
-    return content
+        local handle = io.popen("curl -s -H 'Cache-Control: no-cache' " .. url)
+        if not handle then
+            print("Failed to fetch URL: " .. url)
+            return nil
+        end
+        local content = handle:read("*a")
+        handle:close()
+        return content
 end
 local function replace_current_file_with_latest_version(latest_version_script)
-    local resources_path = cheat:get_resource_path()
-    local current_file_path = resources_path:gsub("resources$", "lua\\lib\\" .. vUtils_LUA_NAME)
-    local file, errorMessage = io.open(current_file_path, "w")
-    if not file then
-        print("Failed to open the current file for writing. Error: ", errorMessage)
-        return false
+    if skipUpdate == true then print("Skipping Update for vUtils") end
+
+    if skipUpdate == false then
+        local resources_path = cheat:get_resource_path()
+        local current_file_path = resources_path:gsub("resources$", "lua\\lib\\" .. vUtils_LUA_NAME)
+        local file, errorMessage = io.open(current_file_path, "w")
+        if not file then
+            print("Failed to open the current file for writing. Error: ", errorMessage)
+            return false
+        end
+        file:write(latest_version_script)
+        file:close()
+        return true
     end
-    file:write(latest_version_script)
-    file:close()
-    return true
 end
 local function check_for_update()
-    local latest_script_content = fetch_url(vUtils_REPO_SCRIPT_PATH)
-    if not latest_script_content then
-        print("Failed to fetch [vUtils] for update check.")
-        return
-    end
-    local remote_version = latest_script_content:match('local vUtils_VERSION = "(%d+%.%d+)"')
-    if not remote_version then
-        print("Failed to extract version from the latest [vUtils] content.")
-        return
-    end
-    print("Local [vUtils] version: " .. vUtils_VERSION .. ", Remote [vUtils] version: " .. remote_version)
-    if remote_version and remote_version > vUtils_VERSION then
-        print("Updating from version " .. vUtils_VERSION .. " to " .. remote_version)
-        if replace_current_file_with_latest_version(latest_script_content) then
-            print("Update successful. Please reload [vUtils].")
-        else
-            print("Failed to update [vUtils].")
+    if skipUpdate == true then print("Skipping Update for vUtils") end
+
+    if skipUpdate == false then
+        local latest_script_content = fetch_url(vUtils_REPO_SCRIPT_PATH)
+        if not latest_script_content then
+            print("Failed to fetch [vUtils] for update check.")
+            return
         end
-    else
-        print("You are running the latest version of [vUtils].")
+        local remote_version = latest_script_content:match('local vUtils_VERSION = "(%d+%.%d+)"')
+        if not remote_version then
+            print("Failed to extract version from the latest [vUtils] content.")
+            return
+        end
+        print("Local [vUtils] version: " .. vUtils_VERSION .. ", Remote [vUtils] version: " .. remote_version)
+        if remote_version and remote_version > vUtils_VERSION then
+            print("Updating from version " .. vUtils_VERSION .. " to " .. remote_version)
+            if replace_current_file_with_latest_version(latest_script_content) then
+                print("Update successful. Please reload [vUtils].")
+            else
+                print("Failed to update [vUtils].")
+            end
+        else
+            print("You are running the latest version of [vUtils].")
+        end
     end
 end
 check_for_update()
+
+
 
 local vUtils = {
     Combo_key = 1,
@@ -64,15 +75,62 @@ local vUtils = {
     Harass_key = 4,
     Flee_key = 5,
     debug = nil,
+    currentColor = {},
+
 }
+
+function vUtils.menu() 
+    local Script_name = "vUtils"
+    local test_navigation = menu.get_main_window():push_navigation(Script_name, 100000)
+    local my_nav = menu.get_main_window():find_navigation(Script_name)
+
+    local draw_sect = my_nav:add_section("ColorShift Selection")
+    local color_config = g_config:add_int(0, "ColorShift Selection")
+    
+
+    local color_select = draw_sect:select("ColorShift Selection", color_config, {
+        "Rainbow", --index 0
+        "Flame",--index 1
+        "Ocean",--index 2
+        "Nature",--index 3
+      })
+
+      function vUtils.updateCurrentColor()
+        local colorIndex = color_config:get_int() -- Assuming get_int() fetches the current selection index
+        if colorIndex == 0 then
+            vUtils.currentColor = vUtils.RainbowColor()
+        elseif colorIndex == 1 then
+            vUtils.currentColor = vUtils.FlameColor()
+        elseif colorIndex == 2 then
+            vUtils.currentColor = vUtils.OceanColor()
+        elseif colorIndex == 3 then
+            vUtils.currentColor = vUtils.NatureColor()
+        else
+            -- Default case, could log an error or set a default color
+            vUtils.currentColor = {r = 255, g = 255, b = 255, a = 255} -- Setting to white as a default
+        end
+    end
+
+    -- It's important to initially update the color to reflect the default or initial selection
+    vUtils.updateCurrentColor()
+
+end
+
+
+
+
+
 
 --Control Print Statements
 function vUtils.Prints(str)
     if vUtils.debug == 1 then print(str) end
 end
 
---RGB ColorShift for renders
-function vUtils.updateRGBColor()
+
+
+
+--RGB ColorShift
+function vUtils.RainbowColor()
     local time = g_time
     local frequency = 1.2
 
@@ -82,6 +140,94 @@ function vUtils.updateRGBColor()
 
     return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = 255}
 end
+
+--Flame ColorShift
+function vUtils.FlameColor()
+    local time = g_time
+    local speed = 1.8
+    local adjustedTime = time * speed
+    math.randomseed(time)
+
+    local colors = {
+        {255, 69, 0, 255}, -- Fiery Sunset
+        {255, 165, 0, 230}, -- Golden Blaze
+        {178, 34, 34, 200}, -- Crimson Ember
+        {105, 105, 105, 150}, -- Smoky Slate
+        {255, 140, 0, 210}, -- Amber Burst
+        {255, 99, 71, 190} -- Coral Flame
+    }
+
+    local colorChangeRate = 6
+    local colorIndex = math.floor((adjustedTime % colorChangeRate) + 1)
+    local nextColorIndex = (colorIndex % #colors) + 1
+
+    local blendFactor = adjustedTime % 1
+    local r = colors[colorIndex][1] * (1 - blendFactor) + colors[nextColorIndex][1] * blendFactor
+    local g = colors[colorIndex][2] * (1 - blendFactor) + colors[nextColorIndex][2] * blendFactor
+    local b = colors[colorIndex][3] * (1 - blendFactor) + colors[nextColorIndex][3] * blendFactor
+    local a = colors[colorIndex][4] * (1 - blendFactor) + colors[nextColorIndex][4] * blendFactor
+
+    return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = math.floor(a)}
+end
+
+
+--Ocean Color Shift
+function vUtils.OceanColor()
+    local time = g_time
+    local frequency = 1.0
+    
+    local colors = {
+        {0, 105, 148, 255}, -- Ocean Depths
+        {11, 96, 176, 255}, -- Midnight Wave
+        {240, 237, 207, 255}, -- Ivory Mist
+        {53, 89, 224, 255}, -- Sapphire Dream
+        {38, 80, 115, 255}, -- Dusk Blue
+        {241, 240, 232, 255}, -- Pearl Whisper
+        {23, 107, 135, 255}, -- Azure Breeze
+        {56, 135, 190, 255} -- Cerulean Sky
+    }
+    
+    local colorNoise = math.sin(frequency * time) * 0.5 + 0.5
+    
+    local colorIndex = math.floor(colorNoise * (#colors - 1)) + 1
+    local nextColorIndex = (colorIndex % #colors) + 1
+    local blendFactor = colorNoise * (#colors - 1) - math.floor(colorNoise * (#colors - 1))
+    
+    local r = colors[colorIndex][1] * (1 - blendFactor) + colors[nextColorIndex][1] * blendFactor
+    local g = colors[colorIndex][2] * (1 - blendFactor) + colors[nextColorIndex][2] * blendFactor
+    local b = colors[colorIndex][3] * (1 - blendFactor) + colors[nextColorIndex][3] * blendFactor
+    local a = colors[colorIndex][4] * (1 - blendFactor) + colors[nextColorIndex][4] * blendFactor
+    
+    return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = math.floor(a)}
+end
+
+--Nature ColorShift
+function vUtils.NatureColor()
+    local time = g_time
+    local frequency = 1.0
+    
+    local colors = {
+        {255, 192, 203, 255}, -- Pink
+        {124, 252, 0, 255}, -- Lime Green
+        {17, 112, 20, 255}, --Light Emerald
+        {255, 255, 0, 255}, -- Yellow
+        {255, 160, 122, 255}, -- Light Salmon
+    }
+    
+    local colorNoise = math.sin(frequency * time) * 0.5 + 0.5
+    
+    local colorIndex = math.floor(colorNoise * (#colors - 1)) + 1
+    local nextColorIndex = (colorIndex % #colors) + 1
+    local blendFactor = colorNoise * (#colors - 1) - math.floor(colorNoise * (#colors - 1))
+    
+    local r = colors[colorIndex][1] * (1 - blendFactor) + colors[nextColorIndex][1] * blendFactor
+    local g = colors[colorIndex][2] * (1 - blendFactor) + colors[nextColorIndex][2] * blendFactor
+    local b = colors[colorIndex][3] * (1 - blendFactor) + colors[nextColorIndex][3] * blendFactor
+    local a = colors[colorIndex][4] * (1 - blendFactor) + colors[nextColorIndex][4] * blendFactor
+    
+    return {r = math.floor(r), g = math.floor(g), b = math.floor(b), a = math.floor(a)}
+end
+
 
 function vUtils.createEnemiesList()
     return features.entity_list:get_enemies()
@@ -264,6 +410,7 @@ function vUtils.getEnimiesHitBy(poly)
     end
     return n
 end
+
 
 
 return vUtils
