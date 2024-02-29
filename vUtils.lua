@@ -6,7 +6,7 @@
     
 ]]--
 
-local vUtils_VERSION = "1.3"
+local vUtils_VERSION = "1.3.1"
 local vUtils_LUA_NAME = "vUtils.lua"
 local vUtils_REPO_BASE_URL = "https://raw.githubusercontent.com/viNclinedv/vUtils/main/"
 local vUtils_REPO_SCRIPT_PATH = vUtils_REPO_BASE_URL .. vUtils_LUA_NAME
